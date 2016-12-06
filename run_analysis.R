@@ -10,6 +10,8 @@ if(!file.exists("data")){
                   "data.zip")
     unzip("data.zip", exdir = "data")
     file.remove("data.zip")
+    file.copy("data/UCI HAR Dataset/.", "data/", recursive = T)
+    file.remove("data/UCI HAR Dataset/")
     
 }
 
