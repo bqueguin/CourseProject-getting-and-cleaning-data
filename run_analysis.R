@@ -1,10 +1,19 @@
-# Set the good directory
-setwd("C:/Users/QUEGUINER/Desktop/Cours/Autre/Coursera/Getting and Cleaning Data/week4/CourseProject getting and cleaning data")
+# Clean up the workspace
+rm(list = ls())
 
-# Import some packages
+# Import packages
 library(dplyr)
 
-# Let's read the data
+# Check if the files are available and download it if not
+if(!file.exists("data")){
+    download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip",
+                  "data.zip")
+    unzip("data.zip", exdir = "data")
+    file.remove("data.zip")
+    
+}
+
+# Let's import the data
 
 # First we create a variables vector with the future column names of our data.
 features <- read.table("data/features.txt", stringsAsFactors = F)
@@ -32,38 +41,38 @@ test <- cbind(testSubject, testLabels, dataFrom = "test", testSet)
 
 # Finally we merge the train and test data with rbind function
 full <- rbind(train, test)
-View(full)
 
 # Now our data are tidy but there are too many variables for us.
 # Let's select those we need
-smaller_full <- full[,1:9]
-smaller_full <- tbl_df(smaller_full)
+variables_we_need <- grepl(".*mean[^F].*|.*std.*", variables)
+variables_we_need <- c(rep(T,3), variables_we_need) # 3 TRUE for SubjectID, activity and dataFrom
+smaller_full <- full[,variables_we_need]
+
+# Let's make better and simpler descriptive variables names
+variable_names <- names(smaller_full)
+variable_names <- gsub("-mean\\(\\)", "Mean", variable_names)
+variable_names <- gsub("-std\\(\\)", "Std", variable_names)
+names(smaller_full) <- variable_names
 
 # Let's sort our data.frame by SubjectID number and activity
 smaller_full <- smaller_full %>% arrange(subjectID, activity)
 
-# Let's make better and simpler descriptive variables names
-names(smaller_full)[4:9] <- c("meanX","meanY","meanZ","stdX","stdY", "stdZ")
 
-# Let's change the values of activity fr a descriptive factor
+# Let's change the values of activity for a descriptive factor
 activities <- read.table("data/activity_labels.txt")[,2]
 smaller_full$activity <- activities[smaller_full$activity]
-
-# Let's check if everything is OK
-str(smaller_full)
-View(smaller_full)
-# OK that's nice
 
 
 # Now let's create a new data frame with the average 
 # of each variable for each activity and each subject.
-
-mean_by <- smaller_full %>% 
-    group_by(subjectID, activity) %>% 
-    summarize(meanX = mean(meanX), meanY = mean(meanY), meanZ = mean(meanZ),
-              stdX = mean(stdX), stdY = mean(stdY), stdZ = mean(stdZ))
+only_mean_and_std <- smaller_full[, names(smaller_full) != c("subjectID","activity","dataFrom")]
+mean_by = aggregate(only_mean_and_std, by = list(subjectID = smaller_full$subjectID, activity = smaller_full$activity), mean)
 
 
+# Let's output the 2 data.frame we want
+
+write.csv(smaller_full, "tidyData1.csv")
+write.csv(mean_by, "meanBySubjectAndActivity.csv")
 
 
 
